@@ -426,6 +426,58 @@ def main():
     # Reduce paths to only those that were removed or changed by the user
     paths = [p for p in Path.paths if p.path != p.newpath or p.copies]
 
+
+    if paths:
+        # Ask for user confirm before applying the change
+        stdin_backup = sys.stdin
+        stdout_backup = sys.stdout
+        stderr_backup = sys.stderr
+
+        sys.stdin = open('/dev/tty')
+        sys.stdout = open('/dev/tty', 'w')
+        sys.stderr = open('/dev/tty', 'w')
+
+        for p in paths:
+            if p.newpath is None:
+                log('remove', f'Removing {p.path}')
+            else:
+                log('rename', f'Renaming {p.path} => {p.newpath}')
+
+        try:
+            user_confirm = None
+
+            while user_confirm is None:
+                print('Continue? [Y/n]', end=' ', file=sys.stderr)
+                # Y for yes
+                # <CR> for Y
+                # n for no
+                # TODO: e for edit, which brings up EDIROT for user to edit again
+                # but I don't know if old content or new content should be used
+                user_confirm = input().strip().lower()
+
+                if not user_confirm:
+                    user_confirm = 'y'
+
+                if user_confirm not in 'yn':
+                    user_confirm = None
+                    continue
+
+        except KeyboardInterrupt:
+            print('\033[1;30mKeyboardInterrupt\033[m', file=sys.stderr)
+            exit(1)
+
+        except EOFError:
+            print('\033[1;30mY \033[m', file=sys.stderr)
+
+        sys.stdin = stdin_backup
+        sys.stdout = stdout_backup
+        sys.stderr = stderr_backup
+
+        if user_confirm != 'y':
+            print('Canceled', file=sys.stderr)
+            exit(1)
+
+
     # Pass 1: Rename all moved files & dirs to temps, delete all removed
     # files.
     for p in paths:
