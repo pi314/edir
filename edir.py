@@ -6,17 +6,20 @@ repository.
 '''
 # Author: Mark Blakeney, May 2019.
 
-import sys
-import os
-import re
 import argparse
-import subprocess
-import tempfile
+import difflib
 import itertools
-import shlex
+import os
 import pathlib
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+
 from collections import OrderedDict
 from shutil import rmtree, copy2, copytree
+
 
 # Some constants
 PROG = pathlib.Path(sys.argv[0]).stem
@@ -39,6 +42,17 @@ COLORS = {
     'rename': COLOR_yellow,
     'copy': COLOR_green,
 }
+
+def color_func(code):
+        return lambda x: '\033[3{}m{}\033[m'.format(code, x)
+
+red = color_func(1)
+green = color_func(2)
+yellow = color_func(3)
+blue = color_func(4)
+magenta = color_func(5)
+cyan = color_func(6)
+white = color_func(7)
 
 args = None
 gitfiles = set()
@@ -437,12 +451,29 @@ def main():
         sys.stdout = open('/dev/tty', 'w')
         sys.stderr = open('/dev/tty', 'w')
 
-        #TODO: use difflib for better printing
         for p in paths:
             if p.newpath is None:
                 log('remove', f'Removing {p.path}')
             else:
-                log('rename', f'Renaming {p.path} => {p.newpath}')
+                a, b = (str(p.path), str(p.newpath))
+                s = difflib.SequenceMatcher(None, a, b)
+                A, B = ('', '')
+                for tag, i1, i2, j1, j2 in s.get_opcodes():
+                    if tag == 'equal':
+                        A += magenta(a[i1:i2])
+                        B += magenta(b[j1:j2])
+
+                    elif tag == 'delete':
+                        A += red(a[i1:i2])
+
+                    elif tag == 'insert':
+                        B += green(b[j1:j2])
+
+                    elif tag == 'replace':
+                        A += yellow(a[i1:i2])
+                        B += yellow(b[j1:j2])
+
+                print('{} [{}] => [{}]'.format(yellow('Renaming:'), A, B))
 
         try:
             user_confirm = None
