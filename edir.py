@@ -437,6 +437,7 @@ def main():
         sys.stdout = open('/dev/tty', 'w')
         sys.stderr = open('/dev/tty', 'w')
 
+        #TODO: use difflib for better printing
         for p in paths:
             if p.newpath is None:
                 log('remove', f'Removing {p.path}')
@@ -451,7 +452,7 @@ def main():
                 # Y for yes
                 # <CR> for Y
                 # n for no
-                # TODO: e for edit, which brings up EDIROT for user to edit again
+                # TODO: e for edit, which brings up EDITOR for user to edit again
                 # but I don't know if old content or new content should be used
                 user_confirm = input().strip().lower()
 
@@ -468,6 +469,7 @@ def main():
 
         except EOFError:
             print('\033[1;30mY \033[m', file=sys.stderr)
+            user_confirm = 'y'
 
         sys.stdin = stdin_backup
         sys.stdout = stdout_backup
