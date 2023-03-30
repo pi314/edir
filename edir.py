@@ -19,6 +19,7 @@ import tempfile
 
 from collections import OrderedDict
 from shutil import rmtree, copy2, copytree
+from unicodedata import east_asian_width
 
 
 # Some constants
@@ -297,6 +298,36 @@ def editfile(filename):
     if res.returncode != 0:
         sys.exit(f'ERROR: {editor} returned {res.returncode}')
 
+
+def str_width(s):
+    return sum(1 + (east_asian_width(c) in 'WF') for c in s)
+
+
+def color_to(color_code):
+    def colorer(s):
+        if not s:
+            return ''
+        return f'\033[{color_code}m{s}\033[m'
+    return colorer
+
+black = color_to('38;2;22;22;29') # eigengrau, or brain gray
+red = color_to(31)
+green = color_to(32)
+yellow = color_to(33)
+blue = color_to(34)
+magenta = color_to(35)
+cyan = color_to(36)
+white = color_to(37)
+red_bg = color_to('41')
+green_bg = color_to('42')
+yellow_bg = color_to('43')
+blue_bg = color_to('44')
+magenta_bg = color_to('45')
+cyan_bg = color_to('46')
+white_bg = color_to('47')
+nocolor = lambda s: '\033[m' + s
+
+
 def main():
     'Main code'
     global args
@@ -460,20 +491,26 @@ def main():
                 A, B = ('', '')
                 for tag, i1, i2, j1, j2 in s.get_opcodes():
                     if tag == 'equal':
-                        A += magenta(a[i1:i2])
-                        B += magenta(b[j1:j2])
+                        A += a[i1:i2]
+                        B += b[j1:j2]
 
                     elif tag == 'delete':
-                        A += red(a[i1:i2])
+                        A += red_bg(a[i1:i2])
+                        B += ' ' * str_width(a[i1:i2])
 
                     elif tag == 'insert':
-                        B += green(b[j1:j2])
+                        A += ' ' * str_width(b[j1:j2])
+                        B += green_bg(b[j1:j2])
 
                     elif tag == 'replace':
-                        A += yellow(a[i1:i2])
-                        B += yellow(b[j1:j2])
+                        wa = str_width(a[i1:i2])
+                        wb = str_width(b[j1:j2])
+                        w = max(wa, wb)
+                        A += red_bg(a[i1:i2]) + (' ' * (w - wa))
+                        B += green_bg(b[j1:j2]) + (' ' * (w - wb))
 
-                print('{} [{}] => [{}]'.format(yellow('Renaming:'), A, B))
+                print('{}[{}]'.format(yellow('Renaming:'), A))
+                print('{}[{}]'.format(yellow('========>'), B))
 
         try:
             user_confirm = None
